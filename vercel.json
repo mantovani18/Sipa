@@ -1,7 +1,1 @@
-{
-  "functions": {
-    "api/index.js": {
-      "runtime": "nodejs26.x"
-    }
-  }
-}
+{}
