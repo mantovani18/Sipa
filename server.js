@@ -30,26 +30,32 @@ const body = (req) => new Promise((resolve, reject) => {
 
 async function api(req, res, url) {
   if (req.method === "OPTIONS") {
-    res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "GET,POST" });
+    res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "GET,POST,DELETE" });
     return res.end();
   }
   if (url.pathname === "/api/participants" && req.method === "GET") {
-    const result = await pool.query("SELECT id, name, department, registration, created_at FROM participants ORDER BY name");
+    const result = await pool.query("SELECT id, name, department, created_at FROM participants ORDER BY name");
     return json(res, 200, result.rows);
   }
   if (url.pathname === "/api/participants" && req.method === "POST") {
     const data = await body(req);
-    if (!data.name || !data.department || !data.registration) return json(res, 400, { error: "Preencha nome, setor e matrícula." });
+    if (!data.name || !data.department) return json(res, 400, { error: "Preencha nome e setor." });
     const result = await pool.query(
-      "INSERT INTO participants (name, department, registration) VALUES ($1, $2, $3) RETURNING *",
-      [data.name.trim(), data.department.trim(), data.registration.trim()]
+      "INSERT INTO participants (name, department) VALUES ($1, $2) RETURNING *",
+      [data.name.trim(), data.department.trim()]
     );
     return json(res, 201, result.rows[0]);
+  }
+  if (url.pathname.startsWith("/api/participants/") && req.method === "DELETE") {
+    const id = Number(url.pathname.split("/").pop());
+    if (!Number.isInteger(id)) return json(res, 400, { error: "Usuário inválido." });
+    await pool.query("DELETE FROM participants WHERE id = $1", [id]);
+    return json(res, 200, { ok: true });
   }
   if (url.pathname === "/api/attendance" && req.method === "GET") {
     const day = url.searchParams.get("day");
     const result = await pool.query(
-      `SELECT p.id, p.name, p.department, p.registration,
+      `SELECT p.id, p.name, p.department,
               (a.id IS NOT NULL) AS present
        FROM participants p
        LEFT JOIN attendance a ON a.participant_id = p.id AND a.event_day = $1
@@ -71,10 +77,13 @@ async function api(req, res, url) {
     return json(res, 200, { ok: true });
   }
   if (url.pathname === "/api/raffle" && req.method === "GET") {
+    const day = url.searchParams.get("day");
+    if (!day) return json(res, 400, { error: "Informe o dia do sorteio." });
     const result = await pool.query(
-      `SELECT DISTINCT p.id, p.name, p.department
+      `SELECT p.id, p.name, p.department
        FROM participants p JOIN attendance a ON a.participant_id = p.id
-       ORDER BY p.name`
+       WHERE a.event_day = $1
+       ORDER BY p.name`, [day]
     );
     return json(res, 200, result.rows);
   }

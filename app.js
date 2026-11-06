@@ -27,7 +27,18 @@ async function loadPeople() {
   participants = await api("/api/participants");
   $("#people-count").textContent = participants.length;
   $("#people-total").textContent = `${participants.length} pessoa${participants.length === 1 ? "" : "s"}`;
-  $("#people-list").innerHTML = participants.map((person) => `<tr><td>${person.name}</td><td>${person.department}</td><td>${person.registration}</td><td>${formatDate(new Date(person.created_at))}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">Nenhum participante cadastrado.</td></tr>`;
+  $("#people-list").innerHTML = participants.map((person) => `<tr><td>${person.id}</td><td>${person.name}</td><td>${person.department}</td><td>${formatDate(new Date(person.created_at))}</td><td><button class="delete-btn" data-id="${person.id}" title="Excluir participante">Excluir</button></td></tr>`).join("") || `<tr><td colspan="5" class="muted">Nenhum participante cadastrado.</td></tr>`;
+  $("#people-list").querySelectorAll(".delete-btn").forEach((button) => button.addEventListener("click", () => deletePerson(button.dataset.id)));
+}
+async function deletePerson(id) {
+  const person = participants.find((item) => item.id === Number(id));
+  if (!person || !window.confirm(`Excluir ${person.name}? As presenças também serão removidas.`)) return;
+  try {
+    await api(`/api/participants/${id}`, { method: "DELETE" });
+    showToast("Participante excluído.");
+    await loadPeople();
+    await loadDashboard();
+  } catch (error) { showToast(error.message); }
 }
 function renderDays() {
   $("#day-tabs").innerHTML = DAYS.map((day, i) => `<button class="day-tab ${i === selectedDay ? "active" : ""}" data-day="${i}">${day}</button>`).join("");
@@ -37,9 +48,9 @@ async function loadAttendance() {
   renderDays();
   attendance = await api(`/api/attendance?day=${dayDate(selectedDay)}`);
   const search = ($("#attendance-search")?.value || "").toLowerCase();
-  const filtered = attendance.filter((person) => `${person.name} ${person.registration}`.toLowerCase().includes(search));
+  const filtered = attendance.filter((person) => `${person.id} ${person.name}`.toLowerCase().includes(search));
   $("#attendance-total").textContent = `${attendance.filter((person) => person.present).length} presentes de ${attendance.length}`;
-  $("#attendance-list").innerHTML = filtered.map((person) => `<tr><td>${person.name}</td><td>${person.department}</td><td>${person.registration}</td><td class="right"><button class="check ${person.present ? "on" : ""}" data-id="${person.id}" title="${person.present ? "Remover presença" : "Marcar presença"}">${person.present ? "✓" : ""}</button></td></tr>`).join("") || `<tr><td colspan="4" class="muted">Nenhum participante encontrado.</td></tr>`;
+  $("#attendance-list").innerHTML = filtered.map((person) => `<tr><td>${person.id}</td><td>${person.name}</td><td>${person.department}</td><td class="right"><button class="check ${person.present ? "on" : ""}" data-id="${person.id}" title="${person.present ? "Remover presença" : "Marcar presença"}">${person.present ? "✓" : ""}</button></td></tr>`).join("") || `<tr><td colspan="4" class="muted">Nenhum participante encontrado.</td></tr>`;
   $("#attendance-list").querySelectorAll(".check").forEach((button) => button.addEventListener("click", () => toggleAttendance(button)));
 }
 async function toggleAttendance(button) {
@@ -57,14 +68,17 @@ async function loadDashboard() {
   $("#day-cards").querySelectorAll(".day-card").forEach((card) => card.addEventListener("click", () => { selectedDay = Number(card.dataset.day); openView("attendance"); }));
 }
 async function loadRaffle() {
-  const eligible = await api("/api/raffle");
+  const raffleDays = $("#raffle-days");
+  raffleDays.innerHTML = DAYS.map((day, i) => `<button class="day-tab ${i === selectedDay ? "active" : ""}" data-day="${i}">${day}${i === DAYS.length - 1 ? " · final" : ""}</button>`).join("");
+  raffleDays.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => { selectedDay = Number(button.dataset.day); loadRaffle(); }));
+  const eligible = await api(`/api/raffle?day=${dayDate(selectedDay)}`);
   $("#eligible-count").textContent = `${eligible.length} pessoa${eligible.length === 1 ? "" : "s"}`;
   $("#eligible-list").innerHTML = eligible.map((person, i) => `<div class="eligible-person"><b>${i + 1}. ${person.name}</b><span>${person.department}</span></div>`).join("") || `<p class="muted">Marque presenças para formar a lista do sorteio.</p>`;
   $("#draw-btn").onclick = () => {
     if (!eligible.length) return showToast("Não há participantes elegíveis ainda.");
     const winner = eligible[Math.floor(Math.random() * eligible.length)];
     $("#winner").textContent = winner.name;
-    $("#winner-sub").textContent = `${winner.department} · Parabéns, você ganhou um brinde!`;
+    $("#winner-sub").textContent = `${winner.department} · Presença confirmada em ${DAYS[selectedDay]}. Parabéns!`;
   };
 }
 $("#person-form").addEventListener("submit", async (event) => {

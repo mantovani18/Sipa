@@ -33,16 +33,16 @@
       <section id="attendance" class="view">
         <div class="section-head"><div><p class="eyebrow">CONTROLE DIÁRIO</p><h3>Marcar presença</h3><p class="muted">Selecione o dia e confirme quem compareceu.</p></div><button class="primary-btn" data-go="people">+ Cadastrar pessoa</button></div>
         <div class="day-tabs" id="day-tabs"></div>
-        <div class="table-wrap"><div class="table-toolbar"><div class="search"><span>⌕</span><input id="attendance-search" placeholder="Buscar por nome ou matrícula..."></div><span class="muted" id="attendance-total"></span></div><table><thead><tr><th>Participante</th><th>Setor</th><th>Matrícula</th><th class="right">Presença</th></tr></thead><tbody id="attendance-list"></tbody></table></div>
+        <div class="table-wrap"><div class="table-toolbar"><div class="search"><span>⌕</span><input id="attendance-search" placeholder="Buscar por nome ou número..."></div><span class="muted" id="attendance-total"></span></div><table><thead><tr><th>Nº usuário</th><th>Participante</th><th>Setor</th><th class="right">Presença</th></tr></thead><tbody id="attendance-list"></tbody></table></div>
       </section>
       <section id="people" class="view">
         <div class="section-head"><div><p class="eyebrow">PRIMEIRO DIA</p><h3>Cadastrar participantes</h3><p class="muted">Cadastre todos os colaboradores que participarão da SIPA.</p></div></div>
-        <div class="form-card"><form id="person-form"><label>Nome completo<input name="name" required placeholder="Ex.: Ana Souza"></label><label>Setor<input name="department" required placeholder="Ex.: Operações"></label><label>Matrícula<input name="registration" required placeholder="Ex.: 001234"></label><button class="primary-btn" type="submit">Cadastrar participante</button></form></div>
-        <div class="table-wrap"><div class="table-toolbar"><h4>Participantes cadastrados</h4><span class="muted" id="people-total"></span></div><table><thead><tr><th>Participante</th><th>Setor</th><th>Matrícula</th><th>Cadastro</th></tr></thead><tbody id="people-list"></tbody></table></div>
+        <div class="form-card"><form id="person-form"><label>Nome completo<input name="name" required placeholder="Ex.: Ana Souza"></label><label>Setor<input name="department" required placeholder="Ex.: Operações"></label><button class="primary-btn" type="submit">Cadastrar participante</button></form></div>
+        <div class="table-wrap"><div class="table-toolbar"><h4>Participantes cadastrados</h4><span class="muted" id="people-total"></span></div><table><thead><tr><th>Nº usuário</th><th>Participante</th><th>Setor</th><th>Cadastro</th><th>Ações</th></tr></thead><tbody id="people-list"></tbody></table></div>
       </section>
       <section id="raffle" class="view">
-        <div class="raffle-intro"><p class="eyebrow light">ENCERRAMENTO DA SIPA</p><h2>Sorteio de brindes</h2><p>Todos que tiveram presença em pelo menos um dia estão elegíveis.</p></div>
-        <div class="raffle-area"><div class="raffle-box"><span class="gift">✦</span><h3 id="winner">Pronto para sortear?</h3><p id="winner-sub">Clique no botão para escolher um participante</p><button id="draw-btn" class="primary-btn">Sortear nome <span>✦</span></button></div><div class="eligible"><div class="section-head"><div><p class="eyebrow">LISTA DE ELEGÍVEIS</p><h3 id="eligible-count">0 pessoas</h3></div></div><div id="eligible-list"></div></div></div>
+        <div class="raffle-intro"><p class="eyebrow light">SORTEIO DIÁRIO</p><h2>Sorteio de brindes</h2><p>Somente quem teve presença no dia selecionado pode participar.</p></div>
+        <div class="raffle-area"><div class="raffle-box"><div class="day-tabs" id="raffle-days"></div><span class="gift">✦</span><h3 id="winner">Pronto para sortear?</h3><p id="winner-sub">Escolha o dia e sorteie um participante presente</p><button id="draw-btn" class="primary-btn">Sortear nome <span>✦</span></button></div><div class="eligible"><div class="section-head"><div><p class="eyebrow">PRESENTES NO DIA</p><h3 id="eligible-count">0 pessoas</h3></div></div><div id="eligible-list"></div></div></div>
       </section>
     </main>
   </div>
