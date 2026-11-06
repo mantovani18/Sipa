@@ -110,6 +110,9 @@ module.exports = async (req, res) => {
     if (["ECONNREFUSED", "ENOTFOUND", "28P01", "3D000", "42501"].includes(error.code)) {
       return send(res, 503, { error: "Não foi possível conectar ao PostgreSQL. Verifique as variáveis de ambiente do banco." });
     }
+    if (error.code === "23502" && error.column === "registration") {
+      return send(res, 503, { error: "O banco ainda possui a coluna antiga registration. Execute a migração do database.sql no banco da Vercel." });
+    }
     return send(res, 500, { error: "Não foi possível concluir a operação." });
   }
 };

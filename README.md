@@ -8,5 +8,12 @@
    `DATABASE_URL`, `POSTGRES_URL`, `POSTGRES_PRISMA_URL` ou
    `POSTGRES_URL_NON_POOLING`.
 
+Se o banco já existia antes da versão atual, execute esta migração no banco
+remoto para remover a coluna antiga:
+
+```sql
+ALTER TABLE participants DROP COLUMN IF EXISTS registration;
+```
+
 Para execução local, a API também aceita `PGHOST`, `PGPORT`, `PGDATABASE`,
 `PGUSER` e `PGPASSWORD`.
