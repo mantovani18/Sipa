@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SIPA | Semana de Segurança</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">S</div><div><strong>SIPA</strong><span>Semana de Segurança</span></div></div>
+      <nav>
+        <button class="nav-item active" data-view="dashboard"><span>⌂</span> Visão geral</button>
+        <button class="nav-item" data-view="attendance"><span>✓</span> Presença</button>
+        <button class="nav-item" data-view="people"><span>♙</span> Participantes</button>
+        <button class="nav-item" data-view="raffle"><span>✦</span> Sorteio</button>
+      </nav>
+      <div class="sidebar-footer"><div class="status-dot"></div><span>Banco conectado</span><small>PostgreSQL / pgAdmin</small></div>
+    </aside>
+    <main>
+      <header class="topbar"><div><p class="eyebrow">EVENTO CORPORATIVO · SIPA</p><h1 id="page-title">Visão geral</h1></div><div class="date-pill">◷ <span id="today"></span></div></header>
+      <div id="toast" class="toast"></div>
+      <section id="dashboard" class="view active-view">
+        <div class="hero"><div><p class="eyebrow light">BEM-VINDOS À</p><h2>Semana de Segurança<br><em>SIPA</em></h2><p>Presença, participação e cuidado em todos os dias.</p></div><div class="hero-icon">✦</div></div>
+        <div class="stats"><article><span class="stat-icon blue">♙</span><div><b id="people-count">0</b><small>Participantes cadastrados</small></div></article><article><span class="stat-icon green">✓</span><div><b id="week-count">0</b><small>Presenças na semana</small></div></article><article><span class="stat-icon yellow">✦</span><div><b id="raffle-count">0</b><small>Elegíveis ao sorteio</small></div></article></div>
+        <div class="section-head"><div><p class="eyebrow">ACOMPANHAMENTO</p><h3>Presença por dia</h3></div><button class="text-btn" data-go="attendance">Abrir controle →</button></div>
+        <div class="day-cards" id="day-cards"></div>
+      </section>
+      <section id="attendance" class="view">
+        <div class="section-head"><div><p class="eyebrow">CONTROLE DIÁRIO</p><h3>Marcar presença</h3><p class="muted">Selecione o dia e confirme quem compareceu.</p></div><button class="primary-btn" data-go="people">+ Cadastrar pessoa</button></div>
+        <div class="day-tabs" id="day-tabs"></div>
+        <div class="table-wrap"><div class="table-toolbar"><div class="search"><span>⌕</span><input id="attendance-search" placeholder="Buscar por nome ou matrícula..."></div><span class="muted" id="attendance-total"></span></div><table><thead><tr><th>Participante</th><th>Setor</th><th>Matrícula</th><th class="right">Presença</th></tr></thead><tbody id="attendance-list"></tbody></table></div>
+      </section>
+      <section id="people" class="view">
+        <div class="section-head"><div><p class="eyebrow">PRIMEIRO DIA</p><h3>Cadastrar participantes</h3><p class="muted">Cadastre todos os colaboradores que participarão da SIPA.</p></div></div>
+        <div class="form-card"><form id="person-form"><label>Nome completo<input name="name" required placeholder="Ex.: Ana Souza"></label><label>Setor<input name="department" required placeholder="Ex.: Operações"></label><label>Matrícula<input name="registration" required placeholder="Ex.: 001234"></label><button class="primary-btn" type="submit">Cadastrar participante</button></form></div>
+        <div class="table-wrap"><div class="table-toolbar"><h4>Participantes cadastrados</h4><span class="muted" id="people-total"></span></div><table><thead><tr><th>Participante</th><th>Setor</th><th>Matrícula</th><th>Cadastro</th></tr></thead><tbody id="people-list"></tbody></table></div>
+      </section>
+      <section id="raffle" class="view">
+        <div class="raffle-intro"><p class="eyebrow light">ENCERRAMENTO DA SIPA</p><h2>Sorteio de brindes</h2><p>Todos que tiveram presença em pelo menos um dia estão elegíveis.</p></div>
+        <div class="raffle-area"><div class="raffle-box"><span class="gift">✦</span><h3 id="winner">Pronto para sortear?</h3><p id="winner-sub">Clique no botão para escolher um participante</p><button id="draw-btn" class="primary-btn">Sortear nome <span>✦</span></button></div><div class="eligible"><div class="section-head"><div><p class="eyebrow">LISTA DE ELEGÍVEIS</p><h3 id="eligible-count">0 pessoas</h3></div></div><div id="eligible-list"></div></div></div>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
