@@ -1,8 +1,17 @@
 const { Pool } = require("pg");
 
+const connectionString = process.env.DATABASE_URL
+  || process.env.POSTGRES_URL
+  || process.env.POSTGRES_PRISMA_URL
+  || process.env.POSTGRES_URL_NON_POOLING;
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
+  connectionString,
+  host: connectionString ? undefined : (process.env.PGHOST || "localhost"),
+  port: Number(process.env.PGPORT || 5432),
+  database: process.env.PGDATABASE || "sipa",
+  user: process.env.PGUSER || "postgres",
+  password: process.env.PGPASSWORD || undefined,
+  ssl: connectionString ? { rejectUnauthorized: false } : undefined,
   max: 5
 });
 
@@ -10,14 +19,22 @@ const send = (res, status, data) => {
   res.status(status).json(data);
 };
 
-const readBody = (req) => new Promise((resolve, reject) => {
+const readBody = (req) => {
+  if (req.body !== undefined) {
+    if (typeof req.body === "string") {
+      try { return Promise.resolve(req.body ? JSON.parse(req.body) : {}); } catch { return Promise.reject(new Error("JSON inválido")); }
+    }
+    return Promise.resolve(req.body || {});
+  }
+  return new Promise((resolve, reject) => {
   let data = "";
   req.on("data", (chunk) => { data += chunk; });
   req.on("end", () => {
     try { resolve(data ? JSON.parse(data) : {}); } catch { reject(new Error("JSON inválido")); }
   });
   req.on("error", reject);
-});
+  });
+};
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -33,7 +50,10 @@ module.exports = async (req, res) => {
     }
     if (url.pathname === "/api/participants" && req.method === "POST") {
       const data = await readBody(req);
-      if (!data.name || !data.department) return send(res, 400, { error: "Preencha nome e setor." });
+      if (typeof data.name !== "string" || typeof data.department !== "string"
+        || !data.name.trim() || !data.department.trim()) {
+        return send(res, 400, { error: "Preencha nome e setor." });
+      }
       const result = await pool.query(
         "INSERT INTO participants (name, department) VALUES ($1, $2) RETURNING *",
         [data.name.trim(), data.department.trim()]
@@ -84,6 +104,12 @@ module.exports = async (req, res) => {
     return send(res, 404, { error: "Rota não encontrada." });
   } catch (error) {
     console.error(error);
+    if (error.code === "42P01") {
+      return send(res, 503, { error: "Banco conectado, mas as tabelas não foram criadas. Execute database.sql no PostgreSQL." });
+    }
+    if (["ECONNREFUSED", "ENOTFOUND", "28P01", "3D000", "42501"].includes(error.code)) {
+      return send(res, 503, { error: "Não foi possível conectar ao PostgreSQL. Verifique as variáveis de ambiente do banco." });
+    }
     return send(res, 500, { error: "Não foi possível concluir a operação." });
   }
 };

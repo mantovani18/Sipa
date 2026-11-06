@@ -19,14 +19,22 @@ const json = (res, status, data) => {
   res.end(JSON.stringify(data));
 };
 
-const body = (req) => new Promise((resolve, reject) => {
+const body = (req) => {
+  if (req.body !== undefined) {
+    if (typeof req.body === "string") {
+      try { return Promise.resolve(req.body ? JSON.parse(req.body) : {}); } catch { return Promise.reject(new Error("JSON inválido")); }
+    }
+    return Promise.resolve(req.body || {});
+  }
+  return new Promise((resolve, reject) => {
   let data = "";
   req.on("data", (chunk) => { data += chunk; });
   req.on("end", () => {
     try { resolve(data ? JSON.parse(data) : {}); } catch { reject(new Error("JSON inválido")); }
   });
   req.on("error", reject);
-});
+  });
+};
 
 async function api(req, res, url) {
   if (req.method === "OPTIONS") {
@@ -39,7 +47,10 @@ async function api(req, res, url) {
   }
   if (url.pathname === "/api/participants" && req.method === "POST") {
     const data = await body(req);
-    if (!data.name || !data.department) return json(res, 400, { error: "Preencha nome e setor." });
+    if (typeof data.name !== "string" || typeof data.department !== "string"
+      || !data.name.trim() || !data.department.trim()) {
+      return json(res, 400, { error: "Preencha nome e setor." });
+    }
     const result = await pool.query(
       "INSERT INTO participants (name, department) VALUES ($1, $2) RETURNING *",
       [data.name.trim(), data.department.trim()]
