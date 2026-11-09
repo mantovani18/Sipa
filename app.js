@@ -75,15 +75,18 @@ async function loadRaffle() {
   const eligible = raffle.eligible;
   $("#eligible-count").textContent = `${eligible.length} pessoa${eligible.length === 1 ? "" : "s"}`;
   $("#eligible-list").innerHTML = eligible.map((person, i) => `<div class="eligible-person"><b>${i + 1}. ${person.name}</b><span>${person.department}</span></div>`).join("") || `<p class="muted">Marque presenças para formar a lista do sorteio.</p>`;
-  const winner = raffle.winner;
-  if (winner) {
-    $("#winner").textContent = winner.name;
-    $("#winner-sub").textContent = `${winner.department} · Presença confirmada em ${DAYS[selectedDay]}. Parabéns!`;
+  const winners = raffle.winners;
+  $("#winner-count").textContent = `${winners.length} ganhador${winners.length === 1 ? "" : "es"}`;
+  $("#winner-list").innerHTML = winners.map((item, i) => `<div class="eligible-person"><b>${i + 1}. ${item.name}</b><span>ID ${item.id} · ${item.event_day}</span></div>`).join("") || `<p class="muted">Nenhum ganhador registrado.</p>`;
+  const lastWinner = winners[winners.length - 1];
+  if (lastWinner) {
+    $("#winner").textContent = lastWinner.name;
+    $("#winner-sub").textContent = `${lastWinner.department} · Ganhador ${winners.length} de ${DAYS[selectedDay]}.`;
   } else {
     $("#winner").textContent = "Pronto para sortear?";
     $("#winner-sub").textContent = "Escolha o dia e sorteie um participante presente";
   }
-  $("#draw-btn").disabled = Boolean(winner);
+  $("#draw-btn").disabled = !eligible.length;
   $("#draw-btn").onclick = async () => {
     if (!eligible.length) return showToast("Não há participantes elegíveis ainda.");
     try {
@@ -93,9 +96,10 @@ async function loadRaffle() {
         body: JSON.stringify({ day: dayDate(selectedDay) })
       });
       $("#winner").textContent = result.name;
-      $("#winner-sub").textContent = `${result.department} · Presença confirmada em ${DAYS[selectedDay]}. Parabéns!`;
-      $("#draw-btn").disabled = true;
-      showToast("Sorteio realizado e registrado.");
+      $("#winner-sub").textContent = `${result.department} · Ganhador registrado em ${DAYS[selectedDay]}.`;
+      $("#draw-btn").disabled = false;
+      showToast(`Ganhador ${winners.length + 1} salvo no banco.`);
+      await loadRaffle();
     } catch (error) { showToast(error.message); await loadRaffle(); }
   };
 }

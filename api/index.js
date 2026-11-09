@@ -95,20 +95,24 @@ module.exports = async (req, res) => {
       const day = url.searchParams.get("day");
       if (!day) return send(res, 400, { error: "Informe o dia do sorteio." });
       const result = await pool.query(
-        `SELECT p.id, p.name, p.department, r.id AS raffle_id
+        `SELECT p.id, p.name, p.department
          FROM participants p JOIN attendance a ON a.participant_id = p.id
-         LEFT JOIN raffles r ON r.winner_id = p.id AND r.event_day = a.event_day
          WHERE a.event_day = $1
+           AND NOT EXISTS (
+             SELECT 1 FROM raffles r
+             WHERE r.event_day = a.event_day AND r.winner_id = p.id
+           )
          ORDER BY p.name`, [day]
       );
       const raffle = await pool.query(
-        `SELECT r.id, r.created_at, p.id AS winner_id, p.name, p.department
+        `SELECT r.id, r.event_day, r.created_at, r.winner_id, r.winner_name AS name, p.department
          FROM raffles r JOIN participants p ON p.id = r.winner_id
-         WHERE r.event_day = $1`, [day]
+         WHERE r.event_day = $1
+         ORDER BY r.id`, [day]
       );
       return send(res, 200, {
-        eligible: result.rows.map(({ raffle_id, ...person }) => person),
-        winner: raffle.rows[0] || null
+        eligible: result.rows,
+        winners: raffle.rows
       });
     }
     if (url.pathname === "/api/raffle" && req.method === "POST") {
@@ -118,15 +122,14 @@ module.exports = async (req, res) => {
       try {
         await client.query("BEGIN");
         await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [data.day]);
-        const existing = await client.query("SELECT id FROM raffles WHERE event_day = $1 FOR UPDATE", [data.day]);
-        if (existing.rowCount) {
-          await client.query("ROLLBACK");
-          return send(res, 409, { error: "O sorteio deste dia já foi realizado." });
-        }
         const eligible = await client.query(
           `SELECT p.id, p.name, p.department
            FROM participants p JOIN attendance a ON a.participant_id = p.id
            WHERE a.event_day = $1
+             AND NOT EXISTS (
+               SELECT 1 FROM raffles r
+               WHERE r.event_day = a.event_day AND r.winner_id = p.id
+             )
            ORDER BY p.id`, [data.day]
         );
         if (!eligible.rowCount) {
@@ -135,12 +138,12 @@ module.exports = async (req, res) => {
         }
         const winner = eligible.rows[randomInt(eligible.rowCount)];
         const saved = await client.query(
-          `INSERT INTO raffles (event_day, winner_id)
-           VALUES ($1, $2)
-           RETURNING id, created_at`, [data.day, winner.id]
+          `INSERT INTO raffles (event_day, winner_id, winner_name)
+           VALUES ($1, $2, $3)
+           RETURNING id, created_at`, [data.day, winner.id, winner.name]
         );
         await client.query("COMMIT");
-        return send(res, 201, { ...winner, raffleId: saved.rows[0].id, createdAt: saved.rows[0].created_at });
+        return send(res, 201, { ...winner, raffleId: saved.rows[0].id, eventDay: data.day, createdAt: saved.rows[0].created_at });
       } catch (error) {
         await client.query("ROLLBACK");
         throw error;
