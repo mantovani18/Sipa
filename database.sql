@@ -18,3 +18,10 @@ CREATE TABLE IF NOT EXISTS attendance (
 );
 
 CREATE INDEX IF NOT EXISTS attendance_day_idx ON attendance(event_day);
+
+CREATE TABLE IF NOT EXISTS raffles (
+  id SERIAL PRIMARY KEY,
+  event_day DATE NOT NULL UNIQUE,
+  winner_id INTEGER NOT NULL REFERENCES participants(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

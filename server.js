@@ -1,4 +1,5 @@
 const http = require("http");
+const { randomInt } = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { Pool } = require("pg");
@@ -91,12 +92,58 @@ async function api(req, res, url) {
     const day = url.searchParams.get("day");
     if (!day) return json(res, 400, { error: "Informe o dia do sorteio." });
     const result = await pool.query(
-      `SELECT p.id, p.name, p.department
+      `SELECT p.id, p.name, p.department, r.id AS raffle_id
        FROM participants p JOIN attendance a ON a.participant_id = p.id
+       LEFT JOIN raffles r ON r.winner_id = p.id AND r.event_day = a.event_day
        WHERE a.event_day = $1
        ORDER BY p.name`, [day]
     );
-    return json(res, 200, result.rows);
+    const raffle = await pool.query(
+      `SELECT r.id, r.created_at, p.id AS winner_id, p.name, p.department
+       FROM raffles r JOIN participants p ON p.id = r.winner_id
+       WHERE r.event_day = $1`, [day]
+    );
+    return json(res, 200, {
+      eligible: result.rows.map(({ raffle_id, ...person }) => person),
+      winner: raffle.rows[0] || null
+    });
+  }
+  if (url.pathname === "/api/raffle" && req.method === "POST") {
+    const data = await body(req);
+    if (!data.day) return json(res, 400, { error: "Informe o dia do sorteio." });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [data.day]);
+      const existing = await client.query("SELECT id FROM raffles WHERE event_day = $1 FOR UPDATE", [data.day]);
+      if (existing.rowCount) {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: "O sorteio deste dia já foi realizado." });
+      }
+      const eligible = await client.query(
+        `SELECT p.id, p.name, p.department
+         FROM participants p JOIN attendance a ON a.participant_id = p.id
+         WHERE a.event_day = $1
+         ORDER BY p.id`, [data.day]
+      );
+      if (!eligible.rowCount) {
+        await client.query("ROLLBACK");
+        return json(res, 400, { error: "Não há participantes elegíveis para este dia." });
+      }
+      const winner = eligible.rows[randomInt(eligible.rowCount)];
+      const saved = await client.query(
+        `INSERT INTO raffles (event_day, winner_id)
+         VALUES ($1, $2)
+         RETURNING id, created_at`, [data.day, winner.id]
+      );
+      await client.query("COMMIT");
+      return json(res, 201, { ...winner, raffleId: saved.rows[0].id, createdAt: saved.rows[0].created_at });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
   return json(res, 404, { error: "Rota não encontrada." });
 }
@@ -116,6 +163,9 @@ const server = http.createServer(async (req, res) => {
     const message = process.env.NODE_ENV === "production"
       ? "Não foi possível concluir a operação."
       : `Erro no PostgreSQL: ${error.message}`;
+    if (error.code === "42P01") {
+      return json(res, 503, { error: "A tabela de sorteios não existe. Execute database.sql no mesmo PostgreSQL configurado na aplicação." });
+    }
     json(res, 500, { error: message });
   }
 });

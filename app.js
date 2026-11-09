@@ -71,14 +71,32 @@ async function loadRaffle() {
   const raffleDays = $("#raffle-days");
   raffleDays.innerHTML = DAYS.map((day, i) => `<button class="day-tab ${i === selectedDay ? "active" : ""}" data-day="${i}">${day}${i === DAYS.length - 1 ? " · final" : ""}</button>`).join("");
   raffleDays.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => { selectedDay = Number(button.dataset.day); loadRaffle(); }));
-  const eligible = await api(`/api/raffle?day=${dayDate(selectedDay)}`);
+  const raffle = await api(`/api/raffle?day=${dayDate(selectedDay)}`);
+  const eligible = raffle.eligible;
   $("#eligible-count").textContent = `${eligible.length} pessoa${eligible.length === 1 ? "" : "s"}`;
   $("#eligible-list").innerHTML = eligible.map((person, i) => `<div class="eligible-person"><b>${i + 1}. ${person.name}</b><span>${person.department}</span></div>`).join("") || `<p class="muted">Marque presenças para formar a lista do sorteio.</p>`;
-  $("#draw-btn").onclick = () => {
-    if (!eligible.length) return showToast("Não há participantes elegíveis ainda.");
-    const winner = eligible[Math.floor(Math.random() * eligible.length)];
+  const winner = raffle.winner;
+  if (winner) {
     $("#winner").textContent = winner.name;
     $("#winner-sub").textContent = `${winner.department} · Presença confirmada em ${DAYS[selectedDay]}. Parabéns!`;
+  } else {
+    $("#winner").textContent = "Pronto para sortear?";
+    $("#winner-sub").textContent = "Escolha o dia e sorteie um participante presente";
+  }
+  $("#draw-btn").disabled = Boolean(winner);
+  $("#draw-btn").onclick = async () => {
+    if (!eligible.length) return showToast("Não há participantes elegíveis ainda.");
+    try {
+      const result = await api("/api/raffle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ day: dayDate(selectedDay) })
+      });
+      $("#winner").textContent = result.name;
+      $("#winner-sub").textContent = `${result.department} · Presença confirmada em ${DAYS[selectedDay]}. Parabéns!`;
+      $("#draw-btn").disabled = true;
+      showToast("Sorteio realizado e registrado.");
+    } catch (error) { showToast(error.message); await loadRaffle(); }
   };
 }
 $("#person-form").addEventListener("submit", async (event) => {
